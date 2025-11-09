@@ -24,7 +24,7 @@ BALL_SIZE = 8  # LEDs long (diameter of each ball)
 INITIAL_VELOCITY = 1.5  # LEDs per frame for the initially moving ball
 RESET_INTERVAL = 1200  # Frames before resetting (600 = 10 seconds at 60fps)
 # BALL_COUNT_OPTIONS = [5, 10, 15]  # Different number of balls to choose from
-BALL_COUNT_OPTIONS = [15]  # Different number of balls to choose from
+BALL_COUNT_OPTIONS = [5, 10, 15]  # Different number of balls to choose from
 BOUNDARY_MODES = ["wraparound", "wall"]  # "wraparound" = circular strip, "wall" = bounce off ends
 
 # Color configuration
@@ -52,58 +52,98 @@ current_boundary_mode = "wraparound"  # Will be set randomly on each reset
 
 # Pre-filled table of random initial configurations for different ball counts
 # Key: number of balls, Value: list of configs
-# Each config is a list of (spacing_multiplier, has_velocity) tuples
+# Each config is a list of (spacing_multiplier, has_velocity, velocity_multiplier) tuples
+# spacing_multiplier: 0.0 = touching, 1.0 = spread evenly
+# has_velocity: True if ball is initially moving
+# velocity_multiplier: Speed multiplier (0.5 = half speed, 1.0 = normal, 1.5 = 1.5x speed, etc.)
 INITIAL_CONFIGS_BY_COUNT = {
     5: [
-        # Config 0: One ball from left, others touching
-        [(1.0, True), (0.0, False), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 1: One ball from right, others touching
-        [(0.0, False), (0.0, False), (0.0, False), (0.0, False), (1.0, True)],
-        # Config 2: Two balls from opposite ends
-        [(1.0, True), (0.0, False), (0.0, False), (0.0, False), (1.0, True)],
-        # Config 3: All touching, two from left moving
-        [(0.0, True), (0.0, True), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 4: Classic - all touching, one moving
-        [(1.0, True), (0.0, False), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 5: Spread out, center ball moving
-        [(1.0, False), (1.0, False), (1.0, True), (1.0, False), (1.0, False)],
+        # Config 0: Classic - single ball from left, rest touching
+        [(1.0, True, 1.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0)],
+        # Config 1: Two balls from opposite ends, different speeds
+        [(1.0, True, 1.2), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, True, 0.8)],
+        # Config 2: Three movers - two from left at different speeds, one from right
+        [(1.0, True, 1.5), (0.5, True, 1.0), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, True, 1.0)],
+        # Config 3: All spread, three movers at different speeds
+        [(1.0, True, 0.7), (1.0, False, 0.0), (1.0, True, 1.3), (1.0, False, 0.0), (1.0, True, 1.0)],
+        # Config 4: Two groups - touching pair and spread movers
+        [(1.0, True, 1.2), (1.0, True, 0.8), (0.5, False, 0.0), (0.0, True, 1.0), (0.0, False, 0.0)],
+        # Config 5: Chaos - four movers at various speeds
+        [(1.0, True, 0.6), (0.8, True, 1.4), (0.6, False, 0.0), (1.0, True, 1.1), (0.7, True, 0.9)],
+        # Config 6: Three touching on left, two movers on right
+        [(0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, True, 1.3), (0.8, True, 0.7)],
+        # Config 7: Alternating movers and stationary, all spread
+        [(1.0, True, 1.1), (1.0, False, 0.0), (1.0, True, 0.9), (1.0, False, 0.0), (1.0, True, 1.2)],
+        # Config 8: Two groups of touching balls, one mover each side
+        [(1.0, True, 1.0), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, False, 0.0), (0.0, True, 1.0)],
+        # Config 9: All movers, tightly packed, varying speeds
+        [(0.3, True, 0.8), (0.3, True, 1.2), (0.3, True, 0.6), (0.3, True, 1.4), (0.3, True, 1.0)],
     ],
     10: [
-        # Config 0: One ball from left, others touching
-        [(1.0, True), (0.0, False), (0.0, False), (0.0, False), (0.0, False), 
-         (0.0, False), (0.0, False), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 1: One from each end
-        [(1.0, True), (0.0, False), (0.0, False), (0.0, False), (0.0, False),
-         (0.0, False), (0.0, False), (0.0, False), (0.0, False), (1.0, True)],
-        # Config 2: Three groups - touching balls with gaps
-        [(1.0, True), (0.0, False), (0.0, False), (1.0, False), (0.0, False),
-         (0.0, False), (1.0, False), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 3: Two moving from left
-        [(0.0, True), (0.0, True), (0.0, False), (0.0, False), (0.0, False),
-         (0.0, False), (0.0, False), (0.0, False), (0.0, False), (0.0, False)],
-        # Config 4: Spread evenly, one in middle moving
-        [(1.0, False), (1.0, False), (1.0, False), (1.0, False), (1.0, True),
-         (1.0, False), (1.0, False), (1.0, False), (1.0, False), (1.0, False)],
-        # Config 5: Multiple moving balls
-        [(1.0, True), (1.0, False), (1.0, True), (1.0, False), (1.0, False),
-         (1.0, False), (1.0, True), (1.0, False), (1.0, False), (1.0, False)],
+        # Config 0: Classic - single mover from left, rest touching
+        [(1.0, True, 1.0)] + [(0.0, False, 0.0)] * 9,
+        # Config 1: Two from opposite ends, different speeds
+        [(1.0, True, 1.3), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0),
+         (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, True, 0.7)],
+        # Config 2: Four movers from left side, varying speeds
+        [(1.0, True, 1.5), (0.7, True, 1.2), (0.5, True, 0.9), (0.3, True, 0.6)] + [(0.0, False, 0.0)] * 6,
+        # Config 3: Three groups - touching clusters with movers
+        [(1.0, True, 1.1), (0.0, False, 0.0), (0.0, True, 0.8), (1.0, False, 0.0), (0.0, False, 0.0),
+         (0.0, True, 1.2), (1.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 1.0), (0.0, False, 0.0)],
+        # Config 4: Five movers, all spread evenly, different speeds
+        [(1.0, True, 0.7), (1.0, False, 0.0), (1.0, True, 1.3), (1.0, False, 0.0), (1.0, True, 1.0),
+         (1.0, False, 0.0), (1.0, True, 0.8), (1.0, False, 0.0), (1.0, True, 1.2), (1.0, False, 0.0)],
+        # Config 5: Six movers, scattered positioning and speeds
+        [(1.0, True, 1.4), (0.8, True, 0.9), (0.5, False, 0.0), (1.0, True, 1.1), (0.6, True, 0.7),
+         (0.4, False, 0.0), (1.0, True, 1.3), (0.7, True, 0.8), (0.5, False, 0.0), (0.3, False, 0.0)],
+        # Config 6: Two large groups, movers at edges and middle
+        [(1.0, True, 1.2), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 0.9), (0.0, False, 0.0),
+         (0.0, True, 1.1), (1.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 0.8), (0.0, False, 0.0)],
+        # Config 7: Four movers in center, stationary on edges
+        [(1.0, False, 0.0), (1.0, False, 0.0), (0.8, True, 1.3), (0.6, True, 0.8), (0.5, True, 1.1),
+         (0.5, True, 0.9), (0.8, False, 0.0), (1.0, False, 0.0), (1.0, False, 0.0), (1.0, False, 0.0)],
+        # Config 8: Alternating groups - touching and spread with movers
+        [(0.0, True, 1.0), (0.0, False, 0.0), (1.0, True, 1.2), (1.0, False, 0.0), (0.0, True, 0.8),
+         (0.0, False, 0.0), (1.0, True, 1.1), (1.0, False, 0.0), (0.0, True, 0.9), (0.0, False, 0.0)],
+        # Config 9: Chaos - seven movers, tight packing, wide speed range
+        [(0.4, True, 0.6), (0.4, True, 1.5), (0.4, False, 0.0), (0.4, True, 1.0), (0.4, True, 0.7),
+         (0.4, True, 1.3), (0.4, False, 0.0), (0.4, True, 0.9), (0.4, True, 1.2), (0.4, False, 0.0)],
     ],
     15: [
-        # Config 0: Classic - one from left, rest touching
-        [(1.0, True)] + [(0.0, False)] * 14,
-        # Config 1: One from each end
-        [(1.0, True)] + [(0.0, False)] * 13 + [(1.0, True)],
-        # Config 2: Two from left into touching cluster
-        [(0.0, True), (0.0, True)] + [(0.0, False)] * 13,
-        # Config 3: Three groups of touching balls
-        [(1.0, True)] + [(0.0, False)] * 4 + [(1.0, False)] + [(0.0, False)] * 4 + 
-        [(1.0, False)] + [(0.0, False)] * 4,
-        # Config 4: Spread evenly
-        [(1.0, False)] * 7 + [(1.0, True)] + [(1.0, False)] * 7,
-        # Config 5: Multiple scattered movers
-        [(1.0, True), (1.0, False), (1.0, False), (1.0, True), (1.0, False)] * 3,
-        # Config 6: Multiple scattered movers in both directions
-        [(1.0, True), (1.0, False), (1.0, True), (1.0, False), (1.0, True)] * 3,
+        # Config 0: Classic - single mover from left, all touching
+        [(1.0, True, 1.0)] + [(0.0, False, 0.0)] * 14,
+        # Config 1: Two from opposite ends, different speeds
+        [(1.0, True, 1.4)] + [(0.0, False, 0.0)] * 13 + [(1.0, True, 0.6)],
+        # Config 2: Five movers from left, varying speeds and spacing
+        [(1.0, True, 1.5), (0.8, True, 1.3), (0.6, True, 1.0), (0.4, True, 0.7), (0.3, True, 0.5)] + [(0.0, False, 0.0)] * 10,
+        # Config 3: Seven movers, all spread evenly, varying speeds
+        [(1.0, True, 0.7), (1.0, False, 0.0), (1.0, True, 1.3), (1.0, False, 0.0), (1.0, True, 1.0),
+         (1.0, False, 0.0), (1.0, True, 0.8), (1.0, False, 0.0), (1.0, True, 1.2), (1.0, False, 0.0),
+         (1.0, True, 0.9), (1.0, False, 0.0), (1.0, True, 1.1), (1.0, False, 0.0), (1.0, False, 0.0)],
+        # Config 4: Four groups of touching balls with movers
+        [(1.0, True, 1.2), (0.0, False, 0.0), (0.0, True, 0.9), (0.0, False, 0.0), (1.0, False, 0.0),
+         (0.0, True, 1.1), (0.0, False, 0.0), (0.0, False, 0.0), (1.0, True, 0.8), (0.0, False, 0.0),
+         (0.0, False, 0.0), (1.0, True, 1.3), (0.0, False, 0.0), (0.0, True, 1.0), (0.0, False, 0.0)],
+        # Config 5: Eight movers, scattered positions, wide speed variety
+        [(1.0, True, 1.5), (0.8, True, 0.8), (0.6, False, 0.0), (1.0, True, 1.2), (0.5, True, 0.6),
+         (0.4, False, 0.0), (1.0, True, 1.4), (0.7, True, 0.9), (0.5, False, 0.0), (1.0, True, 1.1),
+         (0.6, True, 0.7), (0.4, False, 0.0), (0.8, True, 1.3), (0.5, True, 1.0), (0.3, False, 0.0)],
+        # Config 6: Three large groups, movers between and at edges
+        [(1.0, True, 1.1), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 0.9),
+         (1.0, False, 0.0), (0.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 1.2), (1.0, False, 0.0),
+         (0.0, False, 0.0), (0.0, False, 0.0), (0.0, True, 0.8), (0.0, False, 0.0), (0.0, False, 0.0)],
+        # Config 7: Six movers in pairs, different speeds
+        [(1.0, True, 1.3), (0.8, True, 1.0), (1.0, False, 0.0), (1.0, False, 0.0), (1.0, True, 0.7),
+         (0.8, True, 1.1), (1.0, False, 0.0), (1.0, False, 0.0), (1.0, True, 1.2), (0.8, True, 0.8),
+         (1.0, False, 0.0), (1.0, False, 0.0), (1.0, True, 0.9), (0.8, True, 1.4), (1.0, False, 0.0)],
+        # Config 8: Ten movers, tight spacing, extreme speed variation
+        [(0.5, True, 0.5), (0.5, True, 1.6), (0.5, False, 0.0), (0.5, True, 1.0), (0.5, True, 0.7),
+         (0.5, True, 1.4), (0.5, False, 0.0), (0.5, True, 0.9), (0.5, True, 1.3), (0.5, False, 0.0),
+         (0.5, True, 0.6), (0.5, True, 1.2), (0.5, False, 0.0), (0.5, True, 1.1), (0.5, False, 0.0)],
+        # Config 9: Alternating single and touching pairs with movers
+        [(1.0, True, 1.0), (1.0, False, 0.0), (0.0, True, 1.2), (0.0, False, 0.0), (1.0, True, 0.8),
+         (1.0, False, 0.0), (0.0, True, 1.1), (0.0, False, 0.0), (1.0, True, 0.9), (1.0, False, 0.0),
+         (0.0, True, 1.3), (0.0, False, 0.0), (1.0, True, 0.7), (1.0, False, 0.0), (0.0, False, 0.0)],
     ],
 }
 
@@ -165,14 +205,14 @@ def init_balls():
     current_pos = margin
     
     for i in range(current_num_balls):
-        spacing_mult, has_velocity = config[i]
+        spacing_mult, has_velocity, velocity_mult = config[i]
         
         # Determine velocity for this ball
         vel = 0.0
         if has_velocity:
             # Random direction (left or right)
             direction = random.choice([-1, 1])
-            vel = INITIAL_VELOCITY * direction
+            vel = INITIAL_VELOCITY * velocity_mult * direction
         
         new_ball = Ball(current_pos, vel)
         
